@@ -1,0 +1,6 @@
+/* src/app.css */
+/* 1) register Tailwind’s core & variants (sm:, md:, etc.) */
+@import 'tailwindcss';
+
+/* 2) point at Skeleton’s Svelte components for class scanning */
+@source '../node_modules/@skeletonlabs/skeleton-svelte/dist';
