@@ -2,7 +2,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import {
   PLUGIN_REGISTRY,
-  getPlugin,
   type PluginName,
   type PluginIFE
 } from '$lib/addons/registry.server';
@@ -29,6 +28,7 @@ export const GET: RequestHandler = () => {
         web_client_password: '',
         web_client_cookie: '',
         web_account_number: '',
+        web_transaction_id: '',
         api_bearer_token_expires_at: 0
       } as PluginIFE[key]['auth'];
 
@@ -38,7 +38,7 @@ export const GET: RequestHandler = () => {
           name:          plugin.name,
           name_friendly: plugin.name_friendly,
           version:       plugin.version,
-          authFields:    authTemplate   // now TS knows this matches PluginIFE[key]['auth']
+          authFields:    Object.keys(authTemplate)   // now TS knows this matches PluginIFE[key]['auth']
         }
       ];
     })
@@ -49,24 +49,3 @@ export const GET: RequestHandler = () => {
   });
 };
 
-
-export const POST: RequestHandler = async ({ request }) => {
-
-  const { plugin: name, auth } = await request.json() as { plugin: string; auth: unknown };
-
-  const pluginName = name as PluginName;
-
-  const api = getPlugin(pluginName).init();
-
-
-  const result = await api.getCookie(auth as Parameters<typeof api.getCookie>[0]);
-  const typedAuth = auth as PluginIFE[typeof pluginName]['auth'];
-
-  return new Response(
-    JSON.stringify({ success: true, result }),
-    {
-      status: 200,
-      headers: { 'content-type': 'application/json' }
-    }
-  );
-};
