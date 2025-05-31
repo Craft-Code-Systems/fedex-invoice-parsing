@@ -1,9 +1,13 @@
 // registry.server.ts
-import fedexWebAddon, {type ife as IFEfedexWebAddon } from 'ccs-fedex-web-addon';
+import moneybirdWebAddon, {type ife as IFEmoneybirdWebAddon} from 'ccs-moneybird-api-addon';
+// import loggingAddon, {type ife as IFEloggingAddon} from 'ccs-logging-addon';
+// import loggingAddon from 'ccs-logging-addon';
 // …other imports…
 
 export const PLUGIN_REGISTRY = {
-  'fedex-web': fedexWebAddon,
+  'moneybird-api': moneybirdWebAddon,
+  // 'logging': loggingAddon
+
   // …
 } as const;
 
@@ -24,7 +28,8 @@ export function listPlugins(): PluginName[] {
 }
 
 export type PluginIFE = {
-      'fedex-web': typeof IFEfedexWebAddon;
+      'moneybird-api': typeof IFEmoneybirdWebAddon,
+      // 'logging': typeof IFEloggingAddon
       // 'postnl':   typeof PostnlTypes;
     };
 

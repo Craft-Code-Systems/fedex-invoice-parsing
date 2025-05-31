@@ -12,6 +12,7 @@
 	let filled_fields: any = {};
 	export let sessionIdCookie: string = '';
 
+
 	// Get cookie (if exists) and fill filled_fields
 	// Check if document is loaded
 
@@ -68,6 +69,7 @@
 		// document.cookie = `web_client_password=${filled_fields.web_client_password}; SameSite=Lax; Secure; Path=/; Max-Age=14400`;
 		// document.cookie = `web_account_number=${filled_fields.web_account_number}; SameSite=Lax; Secure; Path=/; Max-Age=14400`;
 	}
+
 </script>
 
 {#if visible}
@@ -76,7 +78,7 @@
 	>
 		<!-- Header -->
 		<header>
-			<img src={image} class="aspect-[21/9] w-full grayscale hue-rotate-90" alt="banner" />
+			<img src={image} class="aspect-[21/9] w-full " alt="banner" />
 		</header>
 		<!-- Main -->
 		<article class="space-y-4 p-4">

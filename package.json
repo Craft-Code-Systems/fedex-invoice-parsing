@@ -45,7 +45,8 @@
 	"dependencies": {
 		"@skeletonlabs/tw-plugin": "^0.4.1",
 		"@tailwindcss/vite": "^4.1.5",
-		"ccs-fedex-web-addon": "^1.0.0",
+		"ccs-logging-addon": "^1.0.4",
+		"ccs-moneybird-api-addon": "^1.0.0",
 		"tailwindcss": "^4.1.5",
 		"uuid": "^11.1.0"
 	}
