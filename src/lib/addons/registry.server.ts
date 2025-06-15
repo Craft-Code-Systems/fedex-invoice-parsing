@@ -1,12 +1,12 @@
 // registry.server.ts
 import moneybirdWebAddon, {type ife as IFEmoneybirdWebAddon} from 'ccs-moneybird-api-addon';
-// import loggingAddon, {type ife as IFEloggingAddon} from 'ccs-logging-addon';
-// import loggingAddon from 'ccs-logging-addon';
-// …other imports…
+import loggingAddon, {type ife as IFEloggingAddon} from 'ccs-logging-addon';
+import mongodbAddon, {type ife as IFEmongodbAddon} from 'ccs-mongodb-addon';
 
 export const PLUGIN_REGISTRY = {
   'moneybird-api': moneybirdWebAddon,
-  // 'logging': loggingAddon
+  'logging': loggingAddon,
+  'mongodb': mongodbAddon
 
   // …
 } as const;
@@ -29,7 +29,8 @@ export function listPlugins(): PluginName[] {
 
 export type PluginIFE = {
       'moneybird-api': typeof IFEmoneybirdWebAddon,
-      // 'logging': typeof IFEloggingAddon
+      'logging': typeof IFEloggingAddon,
+      'mongodb': typeof IFEmongodbAddon
       // 'postnl':   typeof PostnlTypes;
     };
 

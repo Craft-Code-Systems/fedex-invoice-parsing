@@ -93,8 +93,21 @@
 	}
 
 	let uploadedFiles: FileList;
+	let results: string[] = [];
 
-  async function uploadCsvFiles() {
+	  function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+
+    // figure out which button kicked this off:
+    const btn = event.submitter as HTMLButtonElement;
+    const destination = btn.dataset.dest; // e.g. "moneybird" or "db"
+
+    if (!destination) return;
+    uploadCsvFiles(uploadedFiles, destination);
+  }
+
+
+  async function uploadCsvFiles(files: FileList ,plugin: string) {
     if (!uploadedFiles?.length) return;
 
     const form = new FormData();
@@ -105,11 +118,16 @@
 
     const res = await fetch('/api/addons/run', {
       method: 'POST',
-      body: form
+      body: form,
+	  headers: {
+		  'addon': plugin
+	  }
     });
 
     const data = await res.json();
+	results = data.files[0].skipped;
     console.log('server response:', data);
+
   }
 </script>
 
@@ -124,16 +142,16 @@
 			<div
 				class="card bg-primary-500 border-surface-200-800 card-hover divide-surface-200-800 --color-primary-500 block h-full max-w-md divide-y overflow-hidden border-[1px] bg-indigo-500 text-white"
 			>
-				<form
-					class="space-y-6"
-					on:submit|preventDefault={(e) => uploadCsvFiles(uploadedFiles)}
-					method="POST"
-				>
+			<h3 class="h3 text-xl font-bold">Parser</h3>
+			<br />
+				<form class="space-y-6" on:submit={handleSubmit}>
 					<div>
 						<!-- file upload -->
 
 						<label class="label">
-							<span class="label-text">File Input</span>
+										<p class="opacity-60">
+				File input
+			</p>
 							<input
 								class="flex w-full justify-center rounded-md bg-orange-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 								type="file"
@@ -143,14 +161,37 @@
 							/>
 						</label>
 						<br />
+																<p class="opacity-60">
+				Action
+			</p>
 						<button
+						data-dest="moneybird-api"
 							type="submit"
 							class="flex w-full justify-center rounded-md bg-orange-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-							>Upload CSV-files</button
+							>FedEx ➡️ Moneybird</button
 						>
-					</div>
+						<br />
+												<button
+												data-dest="mongodb"
+							type="submit"
+							class="flex w-full justify-center rounded-md bg-orange-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+							>FedEx ➡️ DB</button
+						>
+</div>
 				</form>
+								
+
+					<br />
+																					<p class="opacity-60">
+				Skipped
+			</p>
+			<br />	
+						{#each results as result}
+						<p>{result}</p>
+					{/each}
 			</div>
+<br>
+
 		</div>
 		<div class="grid grid-cols-4 gap-4">
 			<!-- Load components after the page is loaded  /> -->

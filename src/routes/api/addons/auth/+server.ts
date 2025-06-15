@@ -2,9 +2,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { sessionStore } from '$lib/server/store'
 import {
-  getPlugin,
   type PluginName,
-  type PluginIFE
 } from '$lib/addons/registry.server';
 
 

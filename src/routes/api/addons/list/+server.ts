@@ -2,8 +2,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import {
   PLUGIN_REGISTRY,
-  type PluginName,
-  type PluginIFE
+  type PluginName
 } from '$lib/addons/registry.server';
 
 // Force TS to see each entry as a [PluginName, Plugin] tuple

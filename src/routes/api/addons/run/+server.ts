@@ -2,44 +2,18 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import { json, error } from '@sveltejs/kit';
-import { promises as fs } from 'fs';
-import { Readable } from 'stream';
 import { sessionStore } from '$lib/server/store';
 import {
-  getPlugin,
-  type PluginName, type PluginIFE
+  getPlugin
 } from '$lib/addons/registry.server';
-
-// export const GET: RequestHandler = async () => {
-//   // 1) Grab all of your sessions from the in-memory store
-//   const sessions = Array.from(sessionStore.values());
-
-//   // 2) For each session, if it's fedex-web, call the async helper
-//   // for (const session of sessions) {
-//   //   if (session.pluginName === 'fedex-web') {
-//   //     // session.auth is whatever shape you stored earlier
-//   //     const fedexAuthResult = await fedexAuth(session.pluginName, session.auth);
-
-//   //     // 3) Stash the new cookie back on your session object
-//   //     session.auth.web_client_cookie = fedexAuthResult.web_client_cookie;
-//   //     const fedexListDocumentsResult = await fedexListDocuments(session.pluginName, session.auth);
-//   //     console.log("fedexListDocumentsResult: ", fedexListDocumentsResult);
-//   //   }
-//   // }
-
-//   // 4) Return whatever makes sense — here I’ll return the updated sessions
-//   return new Response(
-//     JSON.stringify({ success: true, sessions }),
-//     { headers: { 'content-type': 'application/json' } }
-//   );
-// };
-
-const parsedFiles: { fileName: string; rows: string[][] }[] = [];
 
 let token: string = '';
 let administration_id: string = '';
+let uri: string = '';
 
 export const POST: RequestHandler = async ({ request }) => {
+  // Parse headers
+  const headers = request.headers;
 
   // 1) Grab all of your sessions from the in-memory store
   const sessions = Array.from(sessionStore.values());
@@ -47,9 +21,11 @@ export const POST: RequestHandler = async ({ request }) => {
   // 2) For each session, if it's fedex-web, call the async helper
   for (const session of sessions) {
     if (session.pluginName === 'moneybird-api') {
-
       token = session.auth.token;
       administration_id = session.auth.administration_id;
+    }
+    if (session.pluginName === 'mongodb') {
+      uri = session.auth.uri;
     }
   }
 
@@ -61,7 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
     throw error(400, 'No files uploaded');
   }
 
-    const moneybird_results = [];
+    const results = [];
   for (const fileCandidate of uploads) {
     if (!(fileCandidate instanceof File)) {
       // skip any non-File entries
@@ -71,25 +47,79 @@ export const POST: RequestHandler = async ({ request }) => {
     const file = fileCandidate;
     const text = await file.text();
     const jsonData = csvToJson(text);
-    const mappedInvoiceData = mapFields(jsonData);
 
+        if (headers.has('addon') && headers.get('addon') === 'mongodb') {
+          //console.log("mongodb data: ", jsonData);
+          const plugin = getPlugin('mongodb').init();
+          const db = await plugin.dbAuth(uri);
+          results.push(await runDB(jsonData, db, plugin));
+        }
+
+    if (headers.has('addon') && headers.get('addon') === 'moneybird-api') {
+    const mappedInvoiceData = mapFields(jsonData);
     // console.log("mappedInvoiceData: ", mappedInvoiceData);
     const plugin = getPlugin('moneybird-api').init();
 
     for (const mappedInvoice of mappedInvoiceData) {
           const parsedInvoice = await plugin.mapPurchaseInvoiceData(mappedInvoice, token, administration_id, true);
-        moneybird_results.push(await plugin.createPurchaseInvoice(parsedInvoice.data, administration_id, token));
+        results.push(await plugin.createPurchaseInvoice(parsedInvoice.data, administration_id, token));
     }
-
+}
 
   }
 
   // 4. Return the parsed data
   return json({
     success: true,
-    files: moneybird_results
+    files: results
   });
 };
+
+
+async function runDB(manifest: any, db: any, plugin: any) {
+// 1) Your incoming “manifest” array of JSON objects:
+
+let skipped = [];
+let updated = [];
+  await plugin.dbCon(db);
+// 2) Iterate and process each item:
+for (const item of manifest){
+  // Parse the IDs & amounts into numbers
+  const orderId = parseInt(item.referentie_1_verzender, 10);
+  const tnt     = item.luchtvrachtbriefnummer;
+  const cost    = parseFloat(item.totale_bedrag_luchtvrachtbrief);
+  const method  = item.svcpkg_label;
+  const weight  = parseFloat(item.nominaal_gewichtaantal);
+
+
+
+  // 3) Find the order
+  const order = await(plugin.dbRead(db, 'InstantPack', 'order_data_test', { ext_cdk_order_id: orderId }, null));
+  if (order.data.length === 0) {
+    skipped.push(tnt);
+    continue;
+  }
+updated.push(tnt);
+  // 4) Check if that shipment exists
+  const exists = Array.isArray(order.data[0].order_shipment) &&
+                 order.data[0].order_shipment.some(s => s.ship_tnt_number === tnt);
+// console.log("exists (" + orderId + "): ", exists);
+  if (exists) {
+    // 4a) Update existing shipment
+    const update_result = await(plugin.dbUpdate(db, 'InstantPack', 'order_data_test', { ext_cdk_order_id: orderId, "order_shipment.ship_tnt_number": tnt }, { $set: { "order_shipment.$.ship_cost": cost, "order_shipment.$.ship_cost_ready": true, "order_shipment.$ship_weight": weight } }));
+  } else {
+    // 4b) Push a new shipment sub‐document
+    const update_result = await(plugin.dbUpdate(db, 'InstantPack', 'order_data_test', { ext_cdk_order_id: orderId }, { $push: { order_shipment: { ext_cdk_order_id: orderId, ship_tnt_number: tnt, ship_cost: cost, ship_cost_ready: true, ship_method_oid: '67f12db0ee72fad72422e94a', ship_method: method, ship_tnt_url: `https://www.fedex.com/fedextrack/?trknbr=${tnt}`, ship_carrier: "FEDEX", ship_parcel_type: "PARCEL", ship_date: new Date, ship_label_providor: "SENDCLOUD", ship_weight: weight} } }));
+  }
+};
+  await plugin.dbCls();
+  
+// 5) Report any that had no matching order
+return {
+  skipped: skipped,
+  updated: updated};
+
+}
 
 
 /**
